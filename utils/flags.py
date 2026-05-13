@@ -1,10 +1,10 @@
 import pandas as pd
 import os
-import gdown
+import io
+import requests
 
 # Google Drive file ID — update this if the file is replaced
 GDRIVE_FILE_ID = "1HL6GKc3_l4xeQruV4GCbPgcZZ7hUtVJM"
-GDRIVE_URL = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}"
 
 # Local fallback path (for development)
 LOCAL_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "dealer_listings.csv")
@@ -26,14 +26,30 @@ FLAG_LABELS = {
 
 
 def _read_csv_from_drive() -> pd.DataFrame:
-    """Download CSV from Google Drive to a temp file and read it."""
-    import tempfile
-    with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
-        tmp_path = tmp.name
-    gdown.download(GDRIVE_URL, tmp_path, quiet=True, fuzzy=True)
-    df = pd.read_csv(tmp_path, low_memory=False)
-    os.remove(tmp_path)
-    return df
+    """Download CSV from Google Drive using requests (handles large file confirmation)."""
+    session = requests.Session()
+    url = f"https://drive.google.com/uc?export=download&id={GDRIVE_FILE_ID}"
+    response = session.get(url, stream=True)
+
+    # Large files get a virus-scan warning page — extract confirmation token
+    token = None
+    for key, value in response.cookies.items():
+        if key.startswith("download_warning"):
+            token = value
+            break
+
+    # Also check for confirmation in response content (newer Drive behaviour)
+    if token is None and b"confirm=" in response.content:
+        import re
+        match = re.search(rb"confirm=([0-9A-Za-z_\-]+)", response.content)
+        if match:
+            token = match.group(1).decode()
+
+    if token:
+        response = session.get(url, params={"confirm": token}, stream=True)
+
+    content = b"".join(response.iter_content(chunk_size=32768))
+    return pd.read_csv(io.BytesIO(content), low_memory=False)
 
 
 def load_data() -> pd.DataFrame:
