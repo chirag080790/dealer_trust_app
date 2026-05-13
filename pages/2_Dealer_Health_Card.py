@@ -70,11 +70,19 @@ plan_end   = fmt_date(first_val("plan_end_date"))
 period     = f"{plan_start} – {plan_end}" if plan_start != "—" and plan_end != "—" else "—"
 city_label = f"{city} ({sel_id})" if city else sel_id
 
+def info_tile(label, value):
+    return (
+        f"<div style='padding:0 8px 12px 0'>"
+        f"<div style='font-size:0.75em;color:#888;margin-bottom:4px'>{label}</div>"
+        f"<div style='font-size:1.05em;font-weight:600;line-height:1.3'>{value}</div>"
+        f"</div>"
+    )
+
 m1, m2, m3, m4 = st.columns(4)
-m1.metric("City (CTE ID)",  city_label)
-m2.metric("Plan",           plan or "—")
-m3.metric("Plan Period",    period)
-m4.metric("Live Listings",  len(dealer_df))
+with m1: st.markdown(info_tile("City (CTE ID)",  city_label),       unsafe_allow_html=True)
+with m2: st.markdown(info_tile("Plan",           plan or "—"),       unsafe_allow_html=True)
+with m3: st.markdown(info_tile("Plan Period",    period),            unsafe_allow_html=True)
+with m4: st.markdown(info_tile("Live Listings",  str(len(dealer_df))), unsafe_allow_html=True)
 
 # Row 2: org hierarchy — compact single line
 zm = first_val("zonal_manager")
