@@ -203,8 +203,10 @@ for col in FLAG_COLS:
 
     rows_html += f"""
     <tr>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee;vertical-align:top">{FLAG_LABELS[col]}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee;color:#888;font-size:0.82em;vertical-align:top">{defn}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;vertical-align:top">
+        {FLAG_LABELS[col]}
+        {f'<div style="font-size:0.8em;color:#999;margin-top:2px">{defn}</div>' if defn else ''}
+      </td>
       <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;vertical-align:top">{n}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;vertical-align:top">{pct}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:0.88em;vertical-align:top">{links_cell}</td>
@@ -215,7 +217,6 @@ st.markdown(f"""
   <thead>
     <tr style="border-bottom:2px solid #ddd;text-align:left">
       <th style="padding:8px 12px">Flag</th>
-      <th style="padding:8px 12px">Definition</th>
       <th style="padding:8px 12px;text-align:right">Count</th>
       <th style="padding:8px 12px;text-align:right">% of listings</th>
       <th style="padding:8px 12px">Sample listings (up to 3 + duplicates)</th>
