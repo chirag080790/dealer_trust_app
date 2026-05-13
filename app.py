@@ -8,7 +8,7 @@ from utils.flags import load_data, get_suspicious_dealers, FLAG_COLS, FLAG_LABEL
 st.set_page_config(page_title="Dealer Trust & Safety", page_icon="🚗", layout="wide")
 
 st.title("Dealer Listings — Trust & Safety")
-st.caption("Internal ops tool · OLX used-car marketplace")
+st.caption("Internal ops tool · CarWale")
 
 @st.cache_data(show_spinner="Loading data...", ttl=3600)
 def get_df():
