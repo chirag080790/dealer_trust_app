@@ -38,12 +38,20 @@ plan = dealer_df["plan"].mode()[0] if not dealer_df["plan"].isna().all() else No
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown(f"## {sel_name} `{sel_id}`")
-col_info = st.columns(4)
+is_suspicious = sel_id in suspicious_ids
+
+col_info = st.columns(7)
 col_info[0].metric("City", city or "—")
 col_info[1].metric("Plan", plan or "—")
 col_info[2].metric("Total listings", len(dealer_df))
-is_suspicious = sel_id in suspicious_ids
-col_info[3].metric("Suspicious dealer?", "YES 🚨" if is_suspicious else "No ✅")
+col_info[3].metric("Suspicious?", "YES 🚨" if is_suspicious else "No ✅")
+
+def first_val(col):
+    return dealer_df[col].dropna().iloc[0] if col in dealer_df.columns and not dealer_df[col].dropna().empty else "—"
+
+col_info[4].metric("Zonal Manager", first_val("zonal_manager"))
+col_info[5].metric("State Head", first_val("state_head"))
+col_info[6].metric("Area Manager", first_val("area_manager"))
 
 st.divider()
 
