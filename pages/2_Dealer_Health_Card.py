@@ -27,7 +27,7 @@ with col_search:
         .apply(lambda r: f"{r['cte_dealer_id']} — {r['dealer_name']}", axis=1)
         .sort_values().tolist()
     )
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.html("<br>")
     sel = st.selectbox("Search dealer", dealer_list, label_visibility="collapsed",
                        placeholder="Search by ID or name…")
 
@@ -79,10 +79,10 @@ def info_tile(label, value):
     )
 
 m1, m2, m3, m4 = st.columns(4)
-with m1: st.markdown(info_tile("City (CTE ID)",  city_label),       unsafe_allow_html=True)
-with m2: st.markdown(info_tile("Plan",           plan or "—"),       unsafe_allow_html=True)
-with m3: st.markdown(info_tile("Plan Period",    period),            unsafe_allow_html=True)
-with m4: st.markdown(info_tile("Live Listings",  str(len(dealer_df))), unsafe_allow_html=True)
+with m1: st.html(info_tile("City (CTE ID)",  city_label))
+with m2: st.html(info_tile("Plan",           plan or "—"))
+with m3: st.html(info_tile("Plan Period",    period))
+with m4: st.html(info_tile("Live Listings",  str(len(dealer_df))))
 
 # Row 2: org hierarchy — compact single line
 zm = first_val("zonal_manager")
@@ -212,7 +212,7 @@ for col in FLAG_COLS:
       <td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:0.88em;vertical-align:top">{links_cell}</td>
     </tr>"""
 
-st.markdown(f"""
+st.html(f"""
 <table style="width:100%;border-collapse:collapse;font-size:0.9em">
   <thead>
     <tr style="border-bottom:2px solid #ddd;text-align:left">
@@ -224,7 +224,7 @@ st.markdown(f"""
   </thead>
   <tbody>{rows_html}</tbody>
 </table>
-""", unsafe_allow_html=True)
+""")
 
 st.divider()
 
