@@ -3,7 +3,7 @@ import pandas as pd
 import os, sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from utils.flags import load_data, get_suspicious_dealers, get_benchmark_cohort, FLAG_COLS, FLAG_LABELS, FLAG_DEFN, CACHE_VERSION
+from utils.flags import load_data, get_suspicious_dealers, get_benchmark_cohort, FLAG_COLS, FLAG_LABELS, FLAG_DEFN, CACHE_VERSION, PLACEHOLDER_REGNOS
 
 st.set_page_config(page_title="Dealer Health Card", page_icon="📋", layout="wide")
 
@@ -100,29 +100,114 @@ issue_pct = flagged / total * 100 if total else 0
 
 st.metric("Flagged listings", f"{flagged} / {total}", f"{issue_pct:.1f}% flagged")
 
+SAME_LISTING_FLAGS = {"f_same_dealer_dup", "f_cross_dealer_same_city", "f_cross_dealer_diff_city"}
+
+def listing_label(r):
+    year = int(r["mfgyear"]) if pd.notna(r.get("mfgyear")) else ""
+    return f"{year} {r.get('make','')} {r.get('model','')}".strip()
+
+def listing_link(r, extra=""):
+    label = listing_label(r) + (f" {extra}" if extra else "")
+    url   = r.get("url", "")
+    if pd.notna(url) and url:
+        return f'<a href="{url}" target="_blank">{label}</a>'
+    return label
+
+def get_duplicates(listing_row, flag_col, full_df, dealer_id):
+    regno     = str(listing_row.get("regno_clean", "")).strip().upper()
+    valid_reg = regno not in PLACEHOLDER_REGNOS and regno != ""
+    sid       = listing_row.get("stockid")
+    city      = listing_row.get("listing_city")
+    modelid   = listing_row.get("cw_modelid")
+    km_b      = listing_row.get("km_bucket")
+    yr        = listing_row.get("mfgyear")
+
+    if flag_col == "f_same_dealer_dup":
+        if valid_reg:
+            mask = ((full_df["cte_dealer_id"] == dealer_id) &
+                    (full_df["regno_clean"] == regno) &
+                    (full_df["listing_city"] == city) &
+                    (full_df["stockid"] != sid))
+        else:
+            mask = ((full_df["cte_dealer_id"] == dealer_id) &
+                    (full_df["cw_modelid"] == modelid) &
+                    (full_df["listing_city"] == city) &
+                    (full_df["km_bucket"] == km_b) &
+                    (full_df["mfgyear"] == yr) &
+                    (full_df["stockid"] != sid))
+
+    elif flag_col == "f_cross_dealer_same_city":
+        if valid_reg:
+            mask = ((full_df["regno_clean"] == regno) &
+                    (full_df["listing_city"] == city) &
+                    (full_df["cte_dealer_id"] != dealer_id))
+        else:
+            mask = ((full_df["cw_modelid"] == modelid) &
+                    (full_df["listing_city"] == city) &
+                    (full_df["km_bucket"] == km_b) &
+                    (full_df["mfgyear"] == yr) &
+                    (full_df["cte_dealer_id"] != dealer_id))
+
+    elif flag_col == "f_cross_dealer_diff_city":
+        if valid_reg:
+            mask = ((full_df["regno_clean"] == regno) &
+                    (full_df["cte_dealer_id"] != dealer_id))
+        else:
+            mask = ((full_df["cw_modelid"] == modelid) &
+                    (full_df["km_bucket"] == km_b) &
+                    (full_df["mfgyear"] == yr) &
+                    (full_df["cte_dealer_id"] != dealer_id))
+    else:
+        return pd.DataFrame()
+
+    return full_df[mask]
+
+
 rows_html = ""
 for col in FLAG_COLS:
     flagged_rows = dealer_df[dealer_df[col] == 1]
-    n = len(flagged_rows)
+    n   = len(flagged_rows)
     pct = f"{n / total * 100:.1f}%"
     defn = FLAG_DEFN.get(col, "")
 
-    links = []
-    if "url" in flagged_rows.columns and n > 0:
-        sample = flagged_rows[["url", "make", "model", "mfgyear"]].dropna(subset=["url"]).head(5)
+    if col in SAME_LISTING_FLAGS:
+        # Up to 3 samples; for each show its duplicate listing links
+        cell_parts = []
+        sample = flagged_rows.dropna(subset=["url"]).head(3)
         for _, r in sample.iterrows():
-            year = int(r["mfgyear"]) if pd.notna(r["mfgyear"]) else ""
-            label = f"{year} {r['make']} {r['model']}".strip()
-            links.append(f'<a href="{r["url"]}" target="_blank">{label}</a>')
-    links_cell = " &nbsp;·&nbsp; ".join(links) if links else "—"
+            primary = listing_link(r)
+            dups    = get_duplicates(r, col, df, sel_id)
+            dup_links = []
+            for _, d in dups.head(5).iterrows():
+                if col == "f_same_dealer_dup":
+                    extra = ""
+                elif col == "f_cross_dealer_same_city":
+                    extra = f"({d.get('dealer_name','')})"
+                else:
+                    extra = f"({d.get('dealer_name','')} · {d.get('listing_city','')})"
+                dup_links.append(listing_link(d, extra))
+            dup_html = (
+                f'<div style="margin-left:12px;font-size:0.85em;color:#777;margin-top:2px">'
+                + " &nbsp;·&nbsp; ".join(f"↳ {l}" for l in dup_links)
+                + "</div>"
+            ) if dup_links else ""
+            cell_parts.append(f"<div style='margin-bottom:6px'>{primary}{dup_html}</div>")
+        links_cell = "".join(cell_parts) if cell_parts else "—"
+    else:
+        # Up to 5 plain links for non-duplicate flags
+        links = []
+        if "url" in flagged_rows.columns and n > 0:
+            for _, r in flagged_rows.dropna(subset=["url"]).head(5).iterrows():
+                links.append(listing_link(r))
+        links_cell = " &nbsp;·&nbsp; ".join(links) if links else "—"
 
     rows_html += f"""
     <tr>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee">{FLAG_LABELS[col]}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee;color:#888;font-size:0.82em">{defn}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right">{n}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right">{pct}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:0.88em">{links_cell}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;vertical-align:top">{FLAG_LABELS[col]}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;color:#888;font-size:0.82em;vertical-align:top">{defn}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;vertical-align:top">{n}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;vertical-align:top">{pct}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:0.88em;vertical-align:top">{links_cell}</td>
     </tr>"""
 
 st.markdown(f"""
@@ -133,7 +218,7 @@ st.markdown(f"""
       <th style="padding:8px 12px">Definition</th>
       <th style="padding:8px 12px;text-align:right">Count</th>
       <th style="padding:8px 12px;text-align:right">% of listings</th>
-      <th style="padding:8px 12px">Sample listings (up to 5)</th>
+      <th style="padding:8px 12px">Sample listings (up to 3 + duplicates)</th>
     </tr>
   </thead>
   <tbody>{rows_html}</tbody>
