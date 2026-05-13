@@ -124,7 +124,9 @@ def get_duplicates(listing_row, flag_col, full_df, dealer_id):
 
     if flag_col == "f_same_dealer_dup":
         if valid_reg:
+            # Must match same dealer + same model + same regno + same city
             mask = ((full_df["cte_dealer_id"] == dealer_id) &
+                    (full_df["cw_modelid"] == modelid) &
                     (full_df["regno_clean"] == regno) &
                     (full_df["listing_city"] == city) &
                     (full_df["stockid"] != sid))
@@ -138,7 +140,8 @@ def get_duplicates(listing_row, flag_col, full_df, dealer_id):
 
     elif flag_col == "f_cross_dealer_same_city":
         if valid_reg:
-            mask = ((full_df["regno_clean"] == regno) &
+            mask = ((full_df["cw_modelid"] == modelid) &
+                    (full_df["regno_clean"] == regno) &
                     (full_df["listing_city"] == city) &
                     (full_df["cte_dealer_id"] != dealer_id))
         else:
@@ -150,7 +153,8 @@ def get_duplicates(listing_row, flag_col, full_df, dealer_id):
 
     elif flag_col == "f_cross_dealer_diff_city":
         if valid_reg:
-            mask = ((full_df["regno_clean"] == regno) &
+            mask = ((full_df["cw_modelid"] == modelid) &
+                    (full_df["regno_clean"] == regno) &
                     (full_df["cte_dealer_id"] != dealer_id))
         else:
             mask = ((full_df["cw_modelid"] == modelid) &

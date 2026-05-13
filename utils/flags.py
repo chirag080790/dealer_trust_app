@@ -54,7 +54,7 @@ def _read_csv_from_drive() -> pd.DataFrame:
     return pd.read_csv(io.BytesIO(content), low_memory=False)
 
 
-CACHE_VERSION = "v3"  # bump this whenever FLAG_COLS change to bust Streamlit cache
+CACHE_VERSION = "v4"  # bump this whenever FLAG_COLS change to bust Streamlit cache
 
 
 def load_data(cache_version: str = CACHE_VERSION) -> pd.DataFrame:
@@ -92,9 +92,10 @@ def compute_flags(df: pd.DataFrame) -> pd.DataFrame:
     p = df.loc[~valid_mask]
 
     # ── f_same_dealer_dup ──────────────────────────────────────────────────────
-    # Valid regno: same dealer + regno + city appears 2+ times
+    # Valid regno: same dealer + model + regno + city appears 2+ times
+    # cw_modelid added so different cars sharing a fake regno don't get grouped
     if len(v):
-        cnt = v.groupby(["cte_dealer_id", "regno_clean", "listing_city"])["stockid"].transform("count")
+        cnt = v.groupby(["cte_dealer_id", "cw_modelid", "regno_clean", "listing_city"])["stockid"].transform("count")
         df.loc[v_idx, "f_same_dealer_dup"] = (cnt.fillna(0) >= 2).astype(int)
 
     # Placeholder: same dealer + model + city + km_bucket + year appears 2+ times
@@ -103,9 +104,9 @@ def compute_flags(df: pd.DataFrame) -> pd.DataFrame:
         df.loc[p_idx, "f_same_dealer_dup"] = (cnt.fillna(0) >= 2).astype(int)
 
     # ── f_cross_dealer_same_city ───────────────────────────────────────────────
-    # Valid: same regno + city at 2+ different dealer IDs
+    # Valid: same model + regno + city at 2+ different dealer IDs
     if len(v):
-        nu = v.groupby(["regno_clean", "listing_city"])["cte_dealer_id"].transform("nunique")
+        nu = v.groupby(["cw_modelid", "regno_clean", "listing_city"])["cte_dealer_id"].transform("nunique")
         df.loc[v_idx, "f_cross_dealer_same_city"] = (nu.fillna(0) >= 2).astype(int)
 
     # Placeholder: same model + city + km_bucket + year at 2+ different dealer IDs
@@ -114,9 +115,9 @@ def compute_flags(df: pd.DataFrame) -> pd.DataFrame:
         df.loc[p_idx, "f_cross_dealer_same_city"] = (nu.fillna(0) >= 2).astype(int)
 
     # ── f_cross_dealer_diff_city ───────────────────────────────────────────────
-    # Valid: same regno appears in 2+ different cities (implies different dealers)
+    # Valid: same model + regno appears in 2+ different cities
     if len(v):
-        nu = v.groupby("regno_clean")["listing_city"].transform("nunique")
+        nu = v.groupby(["cw_modelid", "regno_clean"])["listing_city"].transform("nunique")
         df.loc[v_idx, "f_cross_dealer_diff_city"] = (nu.fillna(0) >= 2).astype(int)
 
     # Placeholder: same model + km_bucket + year appears in 2+ different cities
