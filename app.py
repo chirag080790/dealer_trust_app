@@ -10,11 +10,6 @@ st.set_page_config(page_title="Dealer Trust & Safety", page_icon="🚗", layout=
 st.title("Dealer Listings — Trust & Safety")
 st.caption("Internal ops tool · OLX used-car marketplace")
 
-DATA_PATH = os.path.join(os.path.dirname(__file__), "data", "dealer_listings.csv")
-if not os.path.exists(DATA_PATH):
-    st.error("Data file not found. Copy `dealer_listings.csv` into the `data/` folder and refresh.")
-    st.stop()
-
 @st.cache_data(show_spinner="Loading data...", ttl=3600)
 def get_df():
     return load_data()
