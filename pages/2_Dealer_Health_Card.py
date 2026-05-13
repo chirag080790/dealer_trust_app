@@ -177,10 +177,12 @@ for col in FLAG_COLS:
     if col in SAME_LISTING_FLAGS:
         # Up to 3 samples; for each show its duplicate listing links
         cell_parts = []
-        sample = flagged_rows.dropna(subset=["url"]).head(3)
+        sample = flagged_rows.head(3)
         for _, r in sample.iterrows():
+            dups = get_duplicates(r, col, df, sel_id)
+            if dups.empty:
+                continue  # skip: flagged but no matching duplicate found (stale data guard)
             primary = listing_link(r)
-            dups    = get_duplicates(r, col, df, sel_id)
             dup_links = []
             for _, d in dups.head(5).iterrows():
                 if col == "f_same_dealer_dup":
