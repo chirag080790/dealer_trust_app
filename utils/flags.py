@@ -9,23 +9,28 @@ LOCAL_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "dealer_listi
 
 PLACEHOLDER_REGNOS = {"XXXX", "0000", "NAN", "NEWDELHI", ""}
 
-# Flags in severity order — highest first
+# Flags in display/severity order
 FLAG_COLS = [
-    "f_cross_dealer_diff_city",
-    "f_cross_dealer_same_city",
     "f_same_dealer_dup",
+    "f_cross_dealer_same_city",
+    "f_cross_dealer_diff_city",
     "f_price_abnormal",
     "f_km_abnormal",
     "f_stale",
 ]
 
 FLAG_LABELS = {
-    "f_cross_dealer_diff_city": "Same listing, diff dealers, diff cities",
-    "f_cross_dealer_same_city": "Same listing, diff dealers, same city",
     "f_same_dealer_dup":        "Same listing, same dealer",
+    "f_cross_dealer_same_city": "Same listing, diff dealers, same city",
+    "f_cross_dealer_diff_city": "Same listing, diff dealers, diff cities",
     "f_price_abnormal":         "Price abnormal",
     "f_km_abnormal":            "KMs abnormal",
     "f_stale":                  "Stale listing (>180 days)",
+}
+
+FLAG_DEFN = {
+    "f_price_abnormal": "Price > Rs 4cr or < Rs 1L",
+    "f_km_abnormal":    "KM driven < 500 × car age (yrs) or > 75,000 × car age (yrs)",
 }
 
 
@@ -49,7 +54,7 @@ def _read_csv_from_drive() -> pd.DataFrame:
     return pd.read_csv(io.BytesIO(content), low_memory=False)
 
 
-CACHE_VERSION = "v2"  # bump this whenever FLAG_COLS change to bust Streamlit cache
+CACHE_VERSION = "v3"  # bump this whenever FLAG_COLS change to bust Streamlit cache
 
 
 def load_data(cache_version: str = CACHE_VERSION) -> pd.DataFrame:

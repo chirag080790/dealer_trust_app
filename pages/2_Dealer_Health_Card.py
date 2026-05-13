@@ -3,7 +3,7 @@ import pandas as pd
 import os, sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from utils.flags import load_data, get_suspicious_dealers, get_benchmark_cohort, FLAG_COLS, FLAG_LABELS, CACHE_VERSION
+from utils.flags import load_data, get_suspicious_dealers, get_benchmark_cohort, FLAG_COLS, FLAG_LABELS, FLAG_DEFN, CACHE_VERSION
 
 st.set_page_config(page_title="Dealer Health Card", page_icon="📋", layout="wide")
 
@@ -92,14 +92,24 @@ issue_pct = flagged / total * 100 if total else 0
 
 st.metric("Flagged listings", f"{flagged} / {total}", f"{issue_pct:.1f}% flagged")
 
-flag_rows = [
-    {
-        "Flag":           FLAG_LABELS[col],
-        "Count":          int(dealer_df[col].sum()),
-        "% of listings":  f"{dealer_df[col].sum() / total * 100:.1f}%",
-    }
-    for col in FLAG_COLS          # already in severity order
-]
+flag_rows = []
+for col in FLAG_COLS:
+    flagged_rows = dealer_df[dealer_df[col] == 1]
+    n = len(flagged_rows)
+    if "url" in flagged_rows.columns and n > 0:
+        sample_urls = " | ".join(
+            str(u) for u in flagged_rows["url"].dropna().head(5).tolist()
+        ) or "—"
+    else:
+        sample_urls = "—"
+    flag_rows.append({
+        "Flag":                    FLAG_LABELS[col],
+        "Definition":              FLAG_DEFN.get(col, ""),
+        "Count":                   n,
+        "% of listings":           f"{n / total * 100:.1f}%",
+        "Sample listings (up to 5)": sample_urls,
+    })
+
 st.dataframe(pd.DataFrame(flag_rows), use_container_width=True, hide_index=True)
 
 st.divider()
