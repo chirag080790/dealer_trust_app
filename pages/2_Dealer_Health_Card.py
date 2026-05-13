@@ -92,25 +92,45 @@ issue_pct = flagged / total * 100 if total else 0
 
 st.metric("Flagged listings", f"{flagged} / {total}", f"{issue_pct:.1f}% flagged")
 
-flag_rows = []
+rows_html = ""
 for col in FLAG_COLS:
     flagged_rows = dealer_df[dealer_df[col] == 1]
     n = len(flagged_rows)
-    if "url" in flagged_rows.columns and n > 0:
-        sample_urls = " | ".join(
-            str(u) for u in flagged_rows["url"].dropna().head(5).tolist()
-        ) or "—"
-    else:
-        sample_urls = "—"
-    flag_rows.append({
-        "Flag":                    FLAG_LABELS[col],
-        "Definition":              FLAG_DEFN.get(col, ""),
-        "Count":                   n,
-        "% of listings":           f"{n / total * 100:.1f}%",
-        "Sample listings (up to 5)": sample_urls,
-    })
+    pct = f"{n / total * 100:.1f}%"
+    defn = FLAG_DEFN.get(col, "")
 
-st.dataframe(pd.DataFrame(flag_rows), use_container_width=True, hide_index=True)
+    links = []
+    if "url" in flagged_rows.columns and n > 0:
+        sample = flagged_rows[["url", "make", "model", "mfgyear"]].dropna(subset=["url"]).head(5)
+        for _, r in sample.iterrows():
+            year = int(r["mfgyear"]) if pd.notna(r["mfgyear"]) else ""
+            label = f"{year} {r['make']} {r['model']}".strip()
+            links.append(f'<a href="{r["url"]}" target="_blank">{label}</a>')
+    links_cell = " &nbsp;·&nbsp; ".join(links) if links else "—"
+
+    rows_html += f"""
+    <tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee">{FLAG_LABELS[col]}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;color:#888;font-size:0.82em">{defn}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right">{n}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right">{pct}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:0.88em">{links_cell}</td>
+    </tr>"""
+
+st.markdown(f"""
+<table style="width:100%;border-collapse:collapse;font-size:0.9em">
+  <thead>
+    <tr style="border-bottom:2px solid #ddd;text-align:left">
+      <th style="padding:8px 12px">Flag</th>
+      <th style="padding:8px 12px">Definition</th>
+      <th style="padding:8px 12px;text-align:right">Count</th>
+      <th style="padding:8px 12px;text-align:right">% of listings</th>
+      <th style="padding:8px 12px">Sample listings (up to 5)</th>
+    </tr>
+  </thead>
+  <tbody>{rows_html}</tbody>
+</table>
+""", unsafe_allow_html=True)
 
 st.divider()
 
