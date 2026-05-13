@@ -1,6 +1,5 @@
 import pandas as pd
 import os
-import io
 import gdown
 
 # Google Drive file ID — update this if the file is replaced
@@ -27,11 +26,14 @@ FLAG_LABELS = {
 
 
 def _read_csv_from_drive() -> pd.DataFrame:
-    """Download CSV from Google Drive into memory."""
-    out = io.BytesIO()
-    gdown.download(GDRIVE_URL, out, quiet=True, fuzzy=True)
-    out.seek(0)
-    return pd.read_csv(out, low_memory=False)
+    """Download CSV from Google Drive to a temp file and read it."""
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
+        tmp_path = tmp.name
+    gdown.download(GDRIVE_URL, tmp_path, quiet=True, fuzzy=True)
+    df = pd.read_csv(tmp_path, low_memory=False)
+    os.remove(tmp_path)
+    return df
 
 
 def load_data() -> pd.DataFrame:
