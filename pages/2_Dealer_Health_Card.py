@@ -3,15 +3,15 @@ import pandas as pd
 import os, sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from utils.flags import load_data, get_suspicious_dealers, get_benchmark_cohort, FLAG_COLS, FLAG_LABELS
+from utils.flags import load_data, get_suspicious_dealers, get_benchmark_cohort, FLAG_COLS, FLAG_LABELS, CACHE_VERSION
 
 st.set_page_config(page_title="Dealer Health Card", page_icon="📋", layout="wide")
 
 @st.cache_data(show_spinner="Loading data...")
-def get_df():
+def get_df(_version=None):
     return load_data()
 
-df = get_df()
+df = get_df(CACHE_VERSION)
 suspicious = get_suspicious_dealers(df)
 suspicious_ids = set(suspicious["cte_dealer_id"])
 

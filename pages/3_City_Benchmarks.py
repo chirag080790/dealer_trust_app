@@ -3,17 +3,17 @@ import pandas as pd
 import os, sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from utils.flags import load_data, get_suspicious_dealers
+from utils.flags import load_data, get_suspicious_dealers, CACHE_VERSION
 
 st.set_page_config(page_title="City Benchmarks", page_icon="📊", layout="wide")
 st.title("City Benchmarks")
 st.caption("Aggregate performance by city and plan (suspicious dealers excluded)")
 
 @st.cache_data(show_spinner="Loading data...")
-def get_df():
+def get_df(_version=None):
     return load_data()
 
-df = get_df()
+df = get_df(CACHE_VERSION)
 suspicious = get_suspicious_dealers(df)
 suspicious_ids = set(suspicious["cte_dealer_id"])
 clean_df = df[~df["cte_dealer_id"].isin(suspicious_ids)]

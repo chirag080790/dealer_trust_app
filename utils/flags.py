@@ -49,7 +49,10 @@ def _read_csv_from_drive() -> pd.DataFrame:
     return pd.read_csv(io.BytesIO(content), low_memory=False)
 
 
-def load_data() -> pd.DataFrame:
+CACHE_VERSION = "v2"  # bump this whenever FLAG_COLS change to bust Streamlit cache
+
+
+def load_data(cache_version: str = CACHE_VERSION) -> pd.DataFrame:
     local = os.path.abspath(LOCAL_PATH)
     if os.path.exists(local):
         df = pd.read_csv(local, low_memory=False)
